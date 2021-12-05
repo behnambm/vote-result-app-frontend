@@ -1,82 +1,65 @@
-import Head from 'next/head'
+import { useState, useEffect } from "react"
+import { io } from "socket.io-client"
 
 export default function Home() {
+
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    const socket = io("http://localhost:5000");
+    socket.on("results", (payload) => {
+      const data = JSON.parse(payload)
+      setData(prevData => {
+        const newData = prevData.map(item => {
+          if (item.id == data.vote_id){
+            const first_option = data.options[0]
+            const second_option = data.options[1]
+            item.count_of_first = data[first_option]
+            item.count_of_second = data[second_option]
+          }
+          return item
+        })
+        return newData
+      })
+    });
+    
+    fetch('http://localhost:5000/results')
+    .then(resp => {
+      if (resp.ok) return resp.json()
+      setError(true)
+    })
+    .then(data => {
+      setData(data)
+    })
+  }, [])
+
+  if (error) return <div>failed to load</div>
+  if (data === null) return <div>loading...</div>
+  console.log(data)
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2">
-      <Head>
-        <title>Create Next App</title>
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      <main className="flex flex-col items-center justify-center w-full flex-1 px-20 text-center">
-        <h1 className="text-6xl font-bold">
-          Welcome to{' '}
-          <a className="text-blue-600" href="https://nextjs.org">
-            Next.js!
-          </a>
-        </h1>
-
-        <p className="mt-3 text-2xl">
-          Get started by editing{' '}
-          <code className="p-3 font-mono text-lg bg-gray-100 rounded-md">
-            pages/index.js
-          </code>
-        </p>
-
-        <div className="flex flex-wrap items-center justify-around max-w-4xl mt-6 sm:w-full">
-          <a
-            href="https://nextjs.org/docs"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Documentation &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Find in-depth information about Next.js features and API.
-            </p>
-          </a>
-
-          <a
-            href="https://nextjs.org/learn"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Learn &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Learn about Next.js in an interactive course with quizzes!
-            </p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Examples &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Discover and deploy boilerplate example Next.js projects.
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Deploy &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
-      </main>
-
-      <footer className="flex items-center justify-center w-full h-24 border-t">
-        <a
-          className="flex items-center justify-center"
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className="h-4 ml-2" />
-        </a>
-      </footer>
+    <div className='container '>
+    {data?.map(vote => {
+      const total_votes = vote.count_of_first + vote.count_of_second
+      const first_percent = parseFloat((vote.count_of_first / total_votes) * 100).toFixed(2)
+      const second_percent = parseFloat((vote.count_of_second / total_votes) * 100).toFixed(2)
+      return (
+        <section className='bg-gray-100 p-2 my-2' key={vote.id}>
+          <h1 className='capitalize font-bold'>{vote.title}</h1>
+          <p className='mb-4'>{vote.description}</p>
+          <div className='flex'>
+            <div 
+            className={`${first_percent === '0.00' ? 'hidden' : 'bg-green-500'} px-2 py-4 flex-grow transition-all duration-500`}
+            style={{flexBasis: first_percent + '%'}}>
+              {first_percent}%
+            </div>
+            <div className={`${second_percent === '0.00' ? 'hidden' : 'bg-indigo-500'}  px-2 py-4 flex-grow transition-all	duration-500`} style={{
+              flexBasis: second_percent + '%'
+            }}>{second_percent}%</div>
+          </div>
+          </section>
+      )
+    })}
     </div>
   )
 }

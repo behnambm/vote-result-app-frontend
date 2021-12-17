@@ -2,12 +2,11 @@ import { useState, useEffect } from "react"
 import { io } from "socket.io-client"
 
 export default function Home() {
-
   const [data, setData] = useState(null)
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    const socket = io("http://localhost:5000");
+    const socket = io(process.env.NEXT_PUBLIC_RESULT_API_BASE);
     socket.on("results", (payload) => {
       const data = JSON.parse(payload)
       setData(prevData => {
@@ -23,8 +22,7 @@ export default function Home() {
         return newData
       })
     });
-    
-    fetch('http://localhost:5000/results')
+    fetch(`${process.env.NEXT_PUBLIC_RESULT_API_BASE}/results`)
     .then(resp => {
       if (resp.ok) return resp.json()
       setError(true)
@@ -36,7 +34,6 @@ export default function Home() {
 
   if (error) return <div>failed to load</div>
   if (data === null) return <div>loading...</div>
-  console.log(data)
   return (
     <div className='container '>
     {data?.map(vote => {
